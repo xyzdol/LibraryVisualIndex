@@ -1,3 +1,10 @@
+import Navbar from "../components/Navbar";
+
 export default function Home() {
-    return <div className="text-2xl p-4">Home Page</div>
+    return (
+        <div>
+            <Navbar />
+            <h1 className="text-4xl font-bold p-6">Library Visual Index</h1>
+        </div>
+    );
 }
