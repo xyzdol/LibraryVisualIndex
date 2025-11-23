@@ -9,12 +9,23 @@ from app.routers.comment_router import router as comment_router
 from app.routers.area_router import router as area_router
 from app.routers.shelf_router import router as shelf_router
 from app.routers.broadcast_router import router as broadcast_router
+from fastapi.middleware.cors import CORSMiddleware
+
+
 
 
 app = FastAPI(title="Library Visual Index API")
 
 # 自动创建表（仅开发环境使用）
 Base.metadata.create_all(bind=engine)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # ⭐ 挂载 user_router
 app.include_router(user_router.router, prefix="/users")

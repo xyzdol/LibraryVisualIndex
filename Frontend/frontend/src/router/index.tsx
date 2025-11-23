@@ -9,6 +9,9 @@ import Ranking from "../pages/Ranking";
 import Areas from "../pages/Areas";
 import Shelves from "../pages/Shelves";
 import Broadcasts from "../pages/Broadcasts";
+import Books from "../pages/Books";
+import BookDetail from "../pages/BookDetail";
+
 
 const router = createBrowserRouter([
     {
@@ -36,8 +39,16 @@ const router = createBrowserRouter([
         element: <Areas />,
     },
     {
-        path: "/shelves",
-        element: <Shelves />,
+        path:"/shelves/:area_id",
+        element:<Shelves />,
+    },
+    {
+        path: "/books",
+        element: <Books />,
+    },
+    {
+        path: "/book/:bookId",
+        element: <BookDetail />
     },
     {
         path: "/broadcasts",

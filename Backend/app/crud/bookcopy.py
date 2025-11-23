@@ -2,6 +2,9 @@ from sqlalchemy.orm import Session
 from app.models.bookcopy import BookCopy
 from app.schemas.bookcopy import BookCopyCreate, BookCopyUpdate
 
+def get_bookcopies_by_shelf(db: Session, shelf_id: int):
+    return db.query(BookCopy).filter(BookCopy.shelf_id == shelf_id).all()
+
 
 def create_bookcopy(db: Session, data: BookCopyCreate):
     bc = BookCopy(**data.dict())

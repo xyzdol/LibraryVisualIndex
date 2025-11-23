@@ -2,8 +2,11 @@ from sqlalchemy.orm import Session
 from app.models.shelf import Shelf
 from app.schemas.shelf import ShelfCreate, ShelfUpdate
 
-def list_shelves(db: Session):
-    return db.query(Shelf).all()
+def list_shelves(db: Session, area_id: int | None = None):
+    query = db.query(Shelf)
+    if area_id is not None:
+        query = query.filter(Shelf.area_id == area_id)
+    return query.all()
 
 def get_shelf(db: Session, shelf_id: int):
     return db.query(Shelf).filter(Shelf.shelf_id == shelf_id).first()

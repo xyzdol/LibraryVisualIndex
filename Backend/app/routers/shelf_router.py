@@ -15,8 +15,9 @@ def get_db():
 
 
 @router.get("/", response_model=list[ShelfOut])
-def list_shelves(db: Session = Depends(get_db)):
-    return crud_shelf.list_shelves(db)
+def list_shelves(area_id: int | None = None, db: Session = Depends(get_db)):
+    return crud_shelf.list_shelves(db, area_id)
+
 
 
 @router.post("/", response_model=ShelfOut)
