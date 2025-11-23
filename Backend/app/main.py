@@ -10,6 +10,9 @@ from app.routers.area_router import router as area_router
 from app.routers.shelf_router import router as shelf_router
 from app.routers.broadcast_router import router as broadcast_router
 from fastapi.middleware.cors import CORSMiddleware
+from app import auth_router
+
+
 
 
 
@@ -37,6 +40,7 @@ app.include_router(comment_router)
 app.include_router(area_router)
 app.include_router(shelf_router)
 app.include_router(broadcast_router)
+app.include_router(auth_router.router)
 
 @app.get("/")
 def root():

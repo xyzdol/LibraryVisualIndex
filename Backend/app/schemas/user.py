@@ -34,3 +34,6 @@ class UserList(BaseModel):
     model_config = {
         "from_attributes": True
     }
+class LoginRequest(BaseModel):
+    username: str
+    password: str
