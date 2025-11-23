@@ -33,3 +33,6 @@ class BookOut(BookBase):
 
     class Config:
         from_attributes = True
+
+class BookWithCount(BookOut):
+    borrow_count: int

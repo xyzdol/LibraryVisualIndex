@@ -1,8 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+
 from app.database import SessionLocal
-from app.schemas.book import BookCreate, BookOut, BookUpdate
+from app.schemas.book import BookCreate, BookOut, BookUpdate, BookWithCount
 from app.crud import book as crud_book
 
 
@@ -21,6 +22,29 @@ def search_books(keyword: str, db: Session = Depends(get_db)):
     if not keyword.strip():
         return []
     return crud_book.search_books(db, keyword)
+
+@router.get("/ranking/month", response_model=list[BookWithCount])
+def monthly_ranking(limit: int = 10, db: Session = Depends(get_db)):
+    rows = crud_book.get_monthly_top_books(db, limit=limit)
+    result: list[BookWithCount] = []
+
+    for book, borrow_count in rows:
+        result.append(
+            BookWithCount(
+                book_id=book.book_id,
+                title=book.title,
+                author=book.author,
+                publisher=book.publisher,
+                isbn=book.isbn,
+                category_id=book.category_id,
+                summary=book.summary,
+                publish_year=book.publish_year,
+                cover_image_url=book.cover_image_url,
+                borrow_count=borrow_count,
+            )
+        )
+
+    return result
 
 
 # List all books

@@ -1,6 +1,10 @@
 from sqlalchemy.orm import Session
 from app.models.book import Book
 from app.schemas.book import BookCreate, BookUpdate
+from sqlalchemy import func
+from datetime import datetime
+from app.models.borrowrecord import BorrowRecord
+from app.models.bookcopy import BookCopy
 
 
 # List all books
@@ -54,3 +58,22 @@ def search_books(db: Session, keyword: str):
         .filter(Book.title.ilike(keyword))
         .all()
     )
+def get_monthly_top_books(db: Session, limit: int = 10):
+    # 本月第一天（按 UTC，可根据需要改成本地时间）
+    now = datetime.utcnow()
+    first_day = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+    q = (
+        db.query(
+            Book,
+            func.count(BorrowRecord.record_id).label("borrow_count"),
+        )
+        .join(BookCopy, Book.book_id == BookCopy.book_id)
+        .join(BorrowRecord, BorrowRecord.copy_id == BookCopy.copy_id)
+        .filter(BorrowRecord.borrow_date >= first_day)
+        .group_by(Book.book_id)
+        .order_by(func.count(BorrowRecord.record_id).desc())
+        .limit(limit)
+    )
+
+    return q.all()

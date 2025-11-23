@@ -11,3 +11,7 @@ export async function getBookDetail(bookId: number) {
 export async function searchBooks(keyword: string) {
     return await http.get(`/books/search?keyword=${encodeURIComponent(keyword)}`);
 }
+
+export async function getMonthlyRanking(limit: number = 10) {
+    return await http.get(`/books/ranking/month?limit=${limit}`);
+}
