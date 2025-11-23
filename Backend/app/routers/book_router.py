@@ -16,6 +16,12 @@ def get_db():
     finally:
         db.close()
 
+@router.get("/search", response_model=list[BookOut])
+def search_books(keyword: str, db: Session = Depends(get_db)):
+    if not keyword.strip():
+        return []
+    return crud_book.search_books(db, keyword)
+
 
 # List all books
 @router.get("/", response_model=list[BookOut])

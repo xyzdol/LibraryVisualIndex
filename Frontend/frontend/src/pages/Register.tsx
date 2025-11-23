@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { apiRegister } from "../api/auth";
-import Navbar from "../components/Navbar";
+import { ArrowLeftIcon } from "@heroicons/react/24/outline";
 
 export default function Register() {
     const navigate = useNavigate();
@@ -18,74 +18,71 @@ export default function Register() {
                 password,
                 real_name: realName,
             });
-
-            // 注册完成自动跳去登录
             navigate("/login");
-        } catch (err) {
-            setError("Username already exists" + err);
+        } catch {
+            setError("Username already exists");
         }
     }
 
     return (
-        <div>
-            <Navbar />
+        <div className="min-h-screen w-full flex flex-col items-center justify-center bg-gray-50 p-4">
 
-            <div className="pt-24 flex justify-center">
-                <div className="w-96 bg-white shadow-md rounded-2xl p-8">
+            {/* Back */}
+            <button
+                onClick={() => navigate(-1)}
+                className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200
+                    rounded-xl shadow-sm mb-6 transition self-start ml-4"
+            >
+                <ArrowLeftIcon className="h-5 w-5 text-gray-600" />
+                Back
+            </button>
 
-                    <h1 className="text-3xl font-bold mb-6 text-center text-indigo-600">
-                        Register
-                    </h1>
+            <div className="bg-white shadow-xl rounded-xl p-10 w-96">
+                <h1 className="text-3xl font-bold text-indigo-600 text-center mb-6">
+                    Register
+                </h1>
 
-                    {error && (
-                        <div className="mb-3 text-red-500 text-sm text-center">
-                            {error}
-                        </div>
-                    )}
+                <input
+                    type="text"
+                    placeholder="Username"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-4 py-2 mb-4"
+                />
 
-                    <input
-                        type="text"
-                        placeholder="Username"
-                        className="w-full p-3 border rounded-xl mb-3"
-                        value={username}
-                        onChange={e => setUsername(e.target.value)}
-                    />
+                <input
+                    type="text"
+                    placeholder="Real Name"
+                    value={realName}
+                    onChange={(e) => setRealName(e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-4 py-2 mb-4"
+                />
 
-                    <input
-                        type="text"
-                        placeholder="Real Name (optional)"
-                        className="w-full p-3 border rounded-xl mb-3"
-                        value={realName}
-                        onChange={e => setRealName(e.target.value)}
-                    />
+                <input
+                    type="password"
+                    placeholder="Password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-4 py-2 mb-4"
+                />
 
-                    <input
-                        type="password"
-                        placeholder="Password"
-                        className="w-full p-3 border rounded-xl mb-6"
-                        value={password}
-                        onChange={e => setPassword(e.target.value)}
-                    />
+                <button
+                    onClick={handleRegister}
+                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg"
+                >
+                    Register
+                </button>
 
-                    <button
-                        onClick={handleRegister}
-                        className="w-full py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition"
-                    >
-                        Create Account
-                    </button>
+                <p className="text-center mt-4 text-sm">
+                    Already have an account?
+                    <Link to="/login" className="text-indigo-600 ml-1 hover:underline">
+                        Login
+                    </Link>
+                </p>
 
-                    <p className="mt-4 text-sm text-center text-gray-600">
-                        Already have an account?{" "}
-                        <span
-                            className="text-indigo-600 cursor-pointer"
-                            onClick={() => navigate("/login")}
-                        >
-                            Login
-                        </span>
-                    </p>
-
-                </div>
+                {error && <p className="text-red-500 text-sm mt-3">{error}</p>}
             </div>
+
         </div>
     );
 }

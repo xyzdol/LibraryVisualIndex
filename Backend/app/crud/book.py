@@ -45,3 +45,12 @@ def delete_book(db: Session, book_id: int):
     db.delete(db_book)
     db.commit()
     return True
+
+# Search
+def search_books(db: Session, keyword: str):
+    keyword = f"%{keyword}%"
+    return (
+        db.query(Book)
+        .filter(Book.title.ilike(keyword))
+        .all()
+    )

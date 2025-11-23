@@ -7,3 +7,7 @@ export async function getBooksByShelf(shelfId: number) {
 export async function getBookDetail(bookId: number) {
     return await http.get(`/books/${bookId}`);
 }
+
+export async function searchBooks(keyword: string) {
+    return await http.get(`/books/search?keyword=${encodeURIComponent(keyword)}`);
+}

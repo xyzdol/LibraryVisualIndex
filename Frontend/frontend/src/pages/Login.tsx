@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { apiLogin } from "../api/auth";
+import { ArrowLeftIcon } from "@heroicons/react/24/outline";
 
 export default function Login() {
     const navigate = useNavigate();
@@ -12,19 +13,30 @@ export default function Login() {
     async function handleLogin() {
         try {
             const user = await apiLogin({ username, password });
-
             localStorage.setItem("user", JSON.stringify(user));
-
             navigate("/");
         } catch (err) {
-            setError("Invalid username or password: " + err);
+            setError("Invalid username or password");
         }
     }
 
     return (
-        <div className="w-full h-screen flex items-center justify-center pt-24">
+        <div className="min-h-screen w-full flex flex-col items-center justify-center bg-gray-50 p-4">
+
+            {/* Back */}
+            <button
+                onClick={() => navigate(-1)}
+                className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200
+                    rounded-xl shadow-sm mb-6 transition self-start ml-4"
+            >
+                <ArrowLeftIcon className="h-5 w-5 text-gray-600" />
+                Back
+            </button>
+
             <div className="bg-white shadow-xl rounded-xl p-10 w-96">
-                <h1 className="text-3xl font-bold text-indigo-600 text-center mb-6">Login</h1>
+                <h1 className="text-3xl font-bold text-indigo-600 text-center mb-6">
+                    Login
+                </h1>
 
                 <input
                     type="text"
@@ -58,6 +70,7 @@ export default function Login() {
 
                 {error && <p className="text-red-500 text-sm mt-3">{error}</p>}
             </div>
+
         </div>
     );
 }
