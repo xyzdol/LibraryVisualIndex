@@ -8,113 +8,143 @@ interface RankedBook {
     book_id: number;
     title: string;
     author: string | null;
-    publisher: string | null;
-    isbn: string | null;
-    category_id: number;
     summary: string | null;
-    publish_year: number | null;
     cover_image_url: string | null;
+    publish_year: number | null;
     borrow_count: number;
 }
 
 export default function Ranking() {
     const [list, setList] = useState<RankedBook[]>([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState("");
     const navigate = useNavigate();
 
     useEffect(() => {
         async function load() {
             try {
-                const data = await getMonthlyRanking(10);
+                const data = await getMonthlyRanking(20);
                 setList(data);
-            } catch (err) {
-                console.error(err);
-                setError("Failed to load ranking.");
             } finally {
                 setLoading(false);
             }
         }
-
         load();
     }, []);
+
+    if (loading) {
+        return <div className="text-center text-gray-500 pt-40 text-xl">Loading ranking...</div>;
+    }
+
+    if (list.length === 0) {
+        return <div className="text-center text-gray-500 pt-40 text-xl">No ranking available.</div>;
+    }
+
+    const top1 = list[0];
+    const top2 = list[1];
+    const top3 = list[2];
+    const others = list.slice(3);
 
     return (
         <div>
             <Navbar />
 
             <div className="pt-24 px-8 max-w-6xl mx-auto">
-                <div className="flex items-center justify-between mb-6">
-                    <h1 className="text-4xl font-bold text-gray-900">
-                        Monthly Top Books
-                    </h1>
-                    <span className="text-sm text-gray-500">
-                        Based on borrow records of this month
-                    </span>
+                <h1 className="text-4xl font-bold text-gray-900 mb-8">Monthly Top Books</h1>
+
+                {/* 🥇 第一名 */}
+                <div
+                    className="bg-yellow-50 border border-yellow-200 rounded-2xl shadow-lg p-6 mb-10 cursor-pointer hover:scale-[1.01] transition"
+                    onClick={() => navigate(`/book/${top1.book_id}`)}
+                >
+                    <div className="text-2xl font-bold text-yellow-700 mb-2">🥇 #1 Champion</div>
+
+                    <div className="flex gap-6">
+                        <img
+                            src={top1.cover_image_url || "/default-cover.png"}
+                            className="w-48 h-64 object-cover rounded-xl shadow-md"
+                        />
+
+                        <div className="flex flex-col justify-between">
+                            <div>
+                                <h2 className="text-3xl font-bold text-gray-900">{top1.title}</h2>
+
+                                <p className="text-gray-600 mt-2">
+                                    Author: {top1.author || "Unknown"}
+                                </p>
+
+                                {top1.publish_year && (
+                                    <p className="text-gray-500">Year: {top1.publish_year}</p>
+                                )}
+                            </div>
+
+                            <div className="text-lg font-semibold text-yellow-700 mt-4">
+                                🔥 {top1.borrow_count} borrows this month
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
-                {loading && (
-                    <div className="text-center text-gray-500 text-lg py-10">
-                        Loading ranking...
-                    </div>
-                )}
+                {/* 🥈 第二名 & 🥉 第三名 */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-10">
+                    {top2 && (
+                        <div
+                            className="bg-gray-50 border border-gray-200 rounded-2xl shadow p-4 cursor-pointer hover:shadow-lg transition"
+                            onClick={() => navigate(`/book/${top2.book_id}`)}
+                        >
+                            <div className="text-xl font-bold text-gray-700 mb-2">🥈 #2</div>
+                            <img
+                                src={top2.cover_image_url}
+                                className="w-full h-52 object-cover rounded-xl mb-3"
+                            />
+                            <h2 className="text-lg font-semibold">{top2.title}</h2>
+                            <p className="text-gray-600 text-sm">Author: {top2.author}</p>
+                        </div>
+                    )}
 
-                {error && (
-                    <div className="text-center text-red-500 text-lg py-6">
-                        {error}
-                    </div>
-                )}
+                    {top3 && (
+                        <div
+                            className="bg-orange-50 border border-orange-200 rounded-2xl shadow p-4 cursor-pointer hover:shadow-lg transition"
+                            onClick={() => navigate(`/book/${top3.book_id}`)}
+                        >
+                            <div className="text-xl font-bold text-orange-700 mb-2">🥉 #3</div>
+                            <img
+                                src={top3.cover_image_url}
+                                className="w-full h-52 object-cover rounded-xl mb-3"
+                            />
+                            <h2 className="text-lg font-semibold">{top3.title}</h2>
+                            <p className="text-gray-600 text-sm">Author: {top3.author}</p>
+                        </div>
+                    )}
+                </div>
 
-                {!loading && !error && list.length === 0 && (
-                    <div className="text-center text-gray-500 text-lg py-10">
-                        No borrow records this month yet.
-                    </div>
-                )}
-
-                {!loading && !error && list.length > 0 && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {list.map((book, index) => (
-                            <div
-                                key={book.book_id}
-                                className="bg-white rounded-2xl shadow-md hover:shadow-xl hover:-translate-y-1 transition p-4 cursor-pointer flex flex-col"
-                                onClick={() => navigate(`/book/${book.book_id}`)}
-                            >
-                                {/* 排名角标 */}
-                                <div className="flex items-center justify-between mb-2">
-                                    <span className="text-sm font-semibold text-gray-500">
-                                        #{index + 1}
-                                    </span>
-                                    <span className="text-xs px-2 py-1 rounded-full bg-indigo-50 text-indigo-600">
-                                        {book.borrow_count} borrows this month
-                                    </span>
-                                </div>
-
-                                <img
-                                    src={book.cover_image_url || "https://via.placeholder.com/300x400"}
-                                    className="w-full h-56 object-cover rounded-xl mb-4"
-                                />
-
-                                <h2 className="text-xl font-semibold mb-1 line-clamp-2">
-                                    {book.title}
-                                </h2>
-
-                                <p className="text-gray-600 text-sm mb-1">
-                                    Author: {book.author || "Unknown"}
-                                </p>
-
-                                {book.publish_year && (
-                                    <p className="text-gray-500 text-sm mb-2">
-                                        Year: {book.publish_year}
-                                    </p>
-                                )}
-
-                                <p className="text-sm text-gray-500 mt-auto line-clamp-3">
-                                    {book.summary || "No summary available."}
-                                </p>
+                {/* 4th and more */}
+                <div className="space-y-4">
+                    {others.map((book, index) => (
+                        <div
+                            key={book.book_id}
+                            onClick={() => navigate(`/book/${book.book_id}`)}
+                            className="flex items-center gap-4 bg-white rounded-xl shadow p-4 hover:shadow-md transition cursor-pointer"
+                        >
+                            <div className="text-xl font-bold text-gray-500 w-10 text-center">
+                                #{index + 4}
                             </div>
-                        ))}
-                    </div>
-                )}
+
+                            <img
+                                src={book.cover_image_url}
+                                className="w-16 h-20 object-cover rounded-md"
+                            />
+
+                            <div>
+                                <h3 className="font-semibold text-gray-800">{book.title}</h3>
+                                <p className="text-gray-500 text-sm">Author: {book.author}</p>
+                            </div>
+
+                            <div className="ml-auto text-indigo-600 font-semibold">
+                                {book.borrow_count} borrows
+                            </div>
+                        </div>
+                    ))}
+                </div>
             </div>
         </div>
     );
