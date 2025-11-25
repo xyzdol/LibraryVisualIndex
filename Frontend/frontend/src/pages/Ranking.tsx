@@ -93,7 +93,7 @@ export default function Ranking() {
                         >
                             <div className="text-xl font-bold text-gray-700 mb-2">🥈 #2</div>
                             <img
-                                src={top2.cover_image_url}
+                                src={top2.cover_image_url || "/default-cover.png"}
                                 className="w-full h-52 object-cover rounded-xl mb-3"
                             />
                             <h2 className="text-lg font-semibold">{top2.title}</h2>
@@ -108,7 +108,7 @@ export default function Ranking() {
                         >
                             <div className="text-xl font-bold text-orange-700 mb-2">🥉 #3</div>
                             <img
-                                src={top3.cover_image_url}
+                                src={top3.cover_image_url || "/default-cover.png"}
                                 className="w-full h-52 object-cover rounded-xl mb-3"
                             />
                             <h2 className="text-lg font-semibold">{top3.title}</h2>
@@ -130,7 +130,7 @@ export default function Ranking() {
                             </div>
 
                             <img
-                                src={book.cover_image_url}
+                                src={book.cover_image_url || "/default-cover.png"}
                                 className="w-16 h-20 object-cover rounded-md"
                             />
 
