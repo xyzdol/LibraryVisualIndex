@@ -5,6 +5,9 @@ from sqlalchemy.orm import Session
 from app.database import SessionLocal
 from app.schemas.book import BookCreate, BookOut, BookUpdate, BookWithCount
 from app.crud import book as crud_book
+from app.models.bookcopy import BookCopy
+
+
 
 
 router = APIRouter()
@@ -84,3 +87,18 @@ def delete_book(book_id: int, db: Session = Depends(get_db)):
     if not result:
         raise HTTPException(status_code=404, detail="Book not found")
     return {"ok": True}
+
+@router.get("/{book_id}/first_available_copy")
+def get_first_available_copy(book_id: int, db: Session = Depends(get_db)):
+    copy = (
+        db.query(BookCopy)
+        .filter(BookCopy.book_id == book_id, BookCopy.status == "available")
+        .first()
+    )
+    if not copy:
+        return {"copy_id": None}  # 前端显示“无可借副本”
+    return {
+        "copy_id": copy.copy_id,
+        "status": copy.status,
+        "due_date": copy.due_date
+    }

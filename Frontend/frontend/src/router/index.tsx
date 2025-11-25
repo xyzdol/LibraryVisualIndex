@@ -11,6 +11,7 @@ import Shelves from "../pages/Shelves";
 import Broadcasts from "../pages/Broadcasts";
 import Books from "../pages/Books";
 import BookDetail from "../pages/BookDetail";
+import BorrowedBooks from "../pages/BorrowedBooks";
 
 
 const router = createBrowserRouter([
@@ -53,6 +54,10 @@ const router = createBrowserRouter([
     {
         path: "/broadcasts",
         element: <Broadcasts />,
+    },
+    {
+        path: "/my-borrows",
+        element: <BorrowedBooks />
     },
 ]);
 

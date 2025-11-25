@@ -16,7 +16,7 @@ export default function Login() {
             localStorage.setItem("user", JSON.stringify(user));
             navigate("/");
         } catch (err) {
-            setError("Invalid username or password");
+            setError("Invalid username or password" + err);
         }
     }
 

@@ -1,17 +1,75 @@
-import http from "./http.ts";
+// src/api/books.ts
+import http from "./http";
 
-export async function getBooksByShelf(shelfId: number) {
-    return await http.get(`/bookcopies/by-shelf/${shelfId}`);
+export interface BookBase {
+    book_id: number;
+    title: string;
+    author: string | null;
+    summary: string | null;
+    publish_year: number | null;
+    cover_image_url: string | null;
+    publisher?: string | null;
+    isbn?: string | null;
 }
 
-export async function getBookDetail(bookId: number) {
-    return await http.get(`/books/${bookId}`);
+export interface BookDetailInfo extends BookBase {
+    publisher: string | null;
+    isbn: string | null;
 }
 
-export async function searchBooks(keyword: string) {
-    return await http.get(`/books/search?keyword=${encodeURIComponent(keyword)}`);
+export interface BookCopyWithBook {
+    copy_id: number;
+    status: string;
+    due_date: string | null;
+    book: BookBase;
 }
 
-export async function getMonthlyRanking(limit: number = 10) {
-    return await http.get(`/books/ranking/month?limit=${limit}`);
+export interface RankedBook extends BookBase {
+    category_id: number;
+    publisher: string | null;
+    isbn: string | null;
+    borrow_count: number;
+}
+
+export interface FirstAvailableCopy {
+    copy_id: number;
+    status: string;
+    due_date: string | null;
+}
+
+// 货架上的所有副本
+export async function getBooksByShelf(
+    shelfId: number
+): Promise<BookCopyWithBook[]> {
+    return http.get<BookCopyWithBook[]>(`/bookcopies/by-shelf/${shelfId}`);
+}
+
+// 书籍详情
+export async function getBookDetail(
+    bookId: number
+): Promise<BookDetailInfo> {
+    return http.get<BookDetailInfo>(`/books/${bookId}`);
+}
+
+// 搜索
+export async function searchBooks(keyword: string): Promise<BookBase[]> {
+    return http.get<BookBase[]>(
+        `/books/search?keyword=${encodeURIComponent(keyword)}`
+    );
+}
+
+// 每月排行榜
+export async function getMonthlyRanking(
+    limit: number = 10
+): Promise<RankedBook[]> {
+    return http.get<RankedBook[]>(`/books/ranking/month?limit=${limit}`);
+}
+
+// 获取某本书第一本可借的副本
+export async function getFirstAvailableCopy(
+    bookId: number
+): Promise<FirstAvailableCopy | null> {
+    return http.get<FirstAvailableCopy | null>(
+        `/books/${bookId}/first_available_copy`
+    );
 }

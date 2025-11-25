@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from app.database import SessionLocal
 from app.schemas.broadcast import BroadcastCreate, BroadcastUpdate, BroadcastOut
 from app.crud import broadcast as crud_broadcast
+from app.schemas.borrowrecord import BorrowRecordOut
 
 router = APIRouter(prefix="/broadcasts", tags=["Broadcasts"])
 
@@ -47,3 +48,5 @@ def delete_broadcast(broadcast_id: int, db: Session = Depends(get_db)):
     if not ok:
         raise HTTPException(status_code=404, detail="Broadcast not found")
     return {"message": "Broadcast deleted"}
+
+

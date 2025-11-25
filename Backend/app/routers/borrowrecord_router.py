@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.database import SessionLocal
 from app.schemas.borrowrecord import BorrowRecordCreate, BorrowRecordOut
-from app.crud.borrowrecord import borrow_book, return_book, get_record, list_records
+from app.crud import borrowrecord as crud_borrowrecord
 
 router = APIRouter(prefix="/records", tags=["Borrow Records"])
 
@@ -15,34 +15,61 @@ def get_db():
         db.close()
 
 
-# 借书
 @router.post("/", response_model=BorrowRecordOut)
 def create_borrow_record(data: BorrowRecordCreate, db: Session = Depends(get_db)):
-    record, err = borrow_book(db, data)
+    record, err = crud_borrowrecord.borrow_book(db, data)
     if err:
         raise HTTPException(status_code=400, detail=err)
     return record
 
 
-# 还书
 @router.put("/{record_id}/return", response_model=BorrowRecordOut)
 def return_borrowed_book(record_id: int, db: Session = Depends(get_db)):
-    record = return_book(db, record_id)
+    record = crud_borrowrecord.return_book(db, record_id)
     if not record:
         raise HTTPException(status_code=404, detail="Record not found")
     return record
 
 
-# 查询单条
 @router.get("/{record_id}", response_model=BorrowRecordOut)
 def read_record(record_id: int, db: Session = Depends(get_db)):
-    record = get_record(db, record_id)
+    record = crud_borrowrecord.get_record(db, record_id)
     if not record:
         raise HTTPException(status_code=404, detail="Record not found")
     return record
 
 
-# 查询全部
 @router.get("/", response_model=list[BorrowRecordOut])
 def read_records(db: Session = Depends(get_db)):
-    return list_records(db)
+    return crud_borrowrecord.list_records(db)
+
+
+# 用户借阅书籍（带嵌套 book / copy 信息），给前端 My Borrowed Books 用
+@router.get("/user/{user_id}/borrowed_books")
+def user_borrowed_books(user_id: int, db: Session = Depends(get_db)):
+    records = crud_borrowrecord.list_user_borrowed_books(db, user_id)
+
+    result = []
+    for r in records:
+        result.append(
+            {
+                "record_id": r.record_id,
+                "borrow_date": r.borrow_date,
+                "return_date": r.return_date,
+                "status": r.status,
+                "book": {
+                    "title": r.book_copy.book.title,
+                    "author": r.book_copy.book.author,
+                    "cover_image_url": r.book_copy.book.cover_image_url,
+                    "publish_year": r.book_copy.book.publish_year,
+                    "summary": r.book_copy.book.summary,
+                },
+                "copy": {
+                    "copy_id": r.copy_id,
+                    "due_date": r.book_copy.due_date,
+                    "status": r.book_copy.status,
+                },
+            }
+        )
+
+    return result

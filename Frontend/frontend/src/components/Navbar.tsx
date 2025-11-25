@@ -1,11 +1,10 @@
 import { Link, useNavigate } from "react-router-dom";
 
 export default function Navbar() {
-    // const { pathname } = useLocation();
     const navigate = useNavigate();
 
-    const userJson = localStorage.getItem("user");
-    const user = userJson ? JSON.parse(userJson) : null;
+    const raw = localStorage.getItem("user");
+    const user = raw ? JSON.parse(raw) : null;
 
     function logout() {
         localStorage.removeItem("user");
@@ -31,9 +30,18 @@ export default function Navbar() {
 
                     {user ? (
                         <>
+                            {/* 新增 My Borrows */}
+                            <Link
+                                to="/my-borrows"
+                                className="text-gray-700 hover:text-indigo-600"
+                            >
+                                My Borrows
+                            </Link>
+
                             <span className="font-semibold text-indigo-600">
                                 {user.username}
                             </span>
+
                             <button
                                 onClick={logout}
                                 className="text-red-500 hover:text-red-600"
@@ -42,7 +50,10 @@ export default function Navbar() {
                             </button>
                         </>
                     ) : (
-                        <Link to="/login" className="text-gray-700 hover:text-indigo-600">
+                        <Link
+                            to="/login"
+                            className="text-gray-700 hover:text-indigo-600"
+                        >
                             Login
                         </Link>
                     )}

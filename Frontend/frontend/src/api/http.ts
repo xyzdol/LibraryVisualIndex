@@ -1,22 +1,37 @@
 // src/api/http.ts
+export interface HttpClient {
+    get<T>(path: string): Promise<T>;
+    post<T, B = unknown>(path: string, body?: B): Promise<T>;
+    put<T, B = unknown>(path: string, body?: B): Promise<T>;
+}
+
 const BASE_URL = "http://127.0.0.1:8000";
 
-const http = {
-    async get(path: string) {
-        const res = await fetch(BASE_URL + path);
-        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-        return res.json();
-    },
+async function request<T, B = unknown>(
+    method: string,
+    path: string,
+    body?: B
+): Promise<T> {
+    const res = await fetch(BASE_URL + path, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: body === undefined ? undefined : JSON.stringify(body),
+    });
 
-    async post(path: string, body: any) {
-        const res = await fetch(BASE_URL + path, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(body),
-        });
-        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-        return res.json();
+    if (!res.ok) {
+        const error = await res.text();
+        throw new Error(error || `HTTP ${res.status}`);
     }
+
+    return res.json() as Promise<T>;
+}
+
+const http: HttpClient = {
+    get: <T>(path: string) => request<T>("GET", path),
+    post: <T, B = unknown>(path: string, body?: B) =>
+        request<T, B>("POST", path, body),
+    put: <T, B = unknown>(path: string, body?: B) =>
+        request<T, B>("PUT", path, body),
 };
 
 export default http;
