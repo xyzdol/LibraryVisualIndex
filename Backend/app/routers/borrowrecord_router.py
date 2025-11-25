@@ -44,10 +44,23 @@ def read_records(db: Session = Depends(get_db)):
     return crud_borrowrecord.list_records(db)
 
 
-# 用户借阅书籍（带嵌套 book / copy 信息），给前端 My Borrowed Books 用
+# ===============================
+# 用户借阅书籍（只返回未归还的）
+# ===============================
 @router.get("/user/{user_id}/borrowed_books")
 def user_borrowed_books(user_id: int, db: Session = Depends(get_db)):
-    records = crud_borrowrecord.list_user_borrowed_books(db, user_id)
+
+    # ⭐ 只查询未归还 borrowed 状态！
+    records = (
+        db.query(crud_borrowrecord.BorrowRecord)
+        .join(crud_borrowrecord.BookCopy)
+        .filter(
+            crud_borrowrecord.BorrowRecord.user_id == user_id,
+            crud_borrowrecord.BorrowRecord.status == "borrowed",
+            crud_borrowrecord.BookCopy.status == "borrowed",
+        )
+        .all()
+    )
 
     result = []
     for r in records:

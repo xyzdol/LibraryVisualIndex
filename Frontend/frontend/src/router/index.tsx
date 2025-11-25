@@ -12,7 +12,7 @@ import Broadcasts from "../pages/Broadcasts";
 import Books from "../pages/Books";
 import BookDetail from "../pages/BookDetail";
 import BorrowedBooks from "../pages/BorrowedBooks";
-
+import LibraryMap from "../pages/LibraryMap";
 
 const router = createBrowserRouter([
     {
@@ -58,6 +58,10 @@ const router = createBrowserRouter([
     {
         path: "/my-borrows",
         element: <BorrowedBooks />
+    },
+    {
+        path: "/map",
+        element: <LibraryMap />,
     },
 ]);
 
