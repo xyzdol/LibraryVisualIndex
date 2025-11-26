@@ -7,6 +7,7 @@ import {
     getBookDetail,
     getFirstAvailableCopy,
     type BookDetailInfo,
+    type FirstAvailableCopy,
 } from "../api/books";
 
 import { borrowBook } from "../api/borrowRecord";
@@ -19,38 +20,147 @@ export default function BookDetail() {
     const [book, setBook] = useState<BookDetailInfo | null>(null);
     const [loading, setLoading] = useState(true);
 
-    async function handleBorrow() {
-        const user = JSON.parse(localStorage.getItem("user") || "{}");
-        const userId = user.user?.user_id ?? user.user_id;
+    // ⭐ 当前这本书“第一本可借副本”的信息
+    const [availableCopy, setAvailableCopy] = useState<FirstAvailableCopy | null>(null);
+    const [checkingCopy, setCheckingCopy] = useState(true);
 
-        await borrowBook(Number(bookId), userId);
-        alert("Borrow success!");
-    }
+    // 借书按钮 loading
+    const [borrowLoading, setBorrowLoading] = useState(false);
 
-    // ⭐ 新增：定位书架按钮
-    async function handleLocate() {
-        const data = await getFirstAvailableCopy(Number(bookId));
-
-        if (!data) {
-            alert("No available copy. All copies are borrowed!");
-            return;
-        }
-
-        // 跳转到  /map?shelf=xxx
-        navigate(`/map?shelf=${data.shelf_id}`);
-    }
+    // 方便判断是否还能借
+    const canBorrow = !!availableCopy && !borrowLoading;
 
     useEffect(() => {
         async function load() {
-            const data = await getBookDetail(Number(bookId));
-            setBook(data);
-            setLoading(false);
+            if (!bookId) return;
+
+            setLoading(true);
+            setCheckingCopy(true);
+
+            try {
+                // 并行请求：书的详情 + 当前可借副本
+                const [detail, copy] = await Promise.all([
+                    getBookDetail(Number(bookId)),
+                    getFirstAvailableCopy(Number(bookId)),
+                ]);
+
+                setBook(detail);
+                setAvailableCopy(copy); // null 代表“已借完”
+            } catch (err) {
+                console.error("Failed to load book detail:", err);
+            } finally {
+                setLoading(false);
+                setCheckingCopy(false);
+            }
         }
         load();
     }, [bookId]);
 
-    if (loading) return <div className="pt-24 text-center text-gray-500">Loading...</div>;
-    if (!book) return <div className="pt-24 text-center text-gray-500">Book not found</div>;
+    /** ⭐ 借书逻辑：用 availableCopy.copy_id，而不是 bookId */
+    async function handleBorrow() {
+        if (!bookId) return;
+
+        const raw = localStorage.getItem("user");
+        if (!raw) {
+            alert("Please login first.");
+            navigate("/login");
+            return;
+        }
+
+        let parsed: { user?: { user_id?: number }; user_id?: number };
+        try {
+            parsed = JSON.parse(raw);
+        } catch {
+            alert("Login info invalid, please login again.");
+            navigate("/login");
+            return;
+        }
+
+        const userId = parsed.user?.user_id ?? parsed.user_id;
+        if (!userId) {
+            alert("Cannot find your user id, please login again.");
+            navigate("/login");
+            return;
+        }
+
+        if (!availableCopy) {
+            alert("All copies are currently borrowed. Please try later.");
+            return;
+        }
+
+        try {
+            setBorrowLoading(true);
+            await borrowBook(availableCopy.copy_id, userId);
+
+            // 借书成功：把可借副本置空 ⇒ 按钮变灰
+            setAvailableCopy(null);
+
+            alert("Borrow success!");
+        } catch (err: unknown) {
+            console.error("Borrow failed:", err);
+            let msg = "Borrow failed.";
+            if (err instanceof Error) {
+                try {
+                    const obj = JSON.parse(err.message);
+                    if (obj.detail) msg = obj.detail;
+                    else msg = err.message;
+                } catch {
+                    msg = err.message;
+                }
+            }
+            alert(msg);
+        } finally {
+            setBorrowLoading(false);
+        }
+    }
+
+    /** ⭐ 寻找位置：同样用 availableCopy 的 shelf_id */
+    async function handleLocate() {
+        if (!bookId) return;
+
+        // 如果已经有 availableCopy，就不再请求一次
+        let copy = availableCopy;
+        if (!copy) {
+            copy = await getFirstAvailableCopy(Number(bookId));
+        }
+
+        if (!copy) {
+            alert("No available copy. All copies are borrowed!");
+            return;
+        }
+
+        navigate(`/map?shelf=${copy.shelf_id}`);
+    }
+
+    if (loading) {
+        return (
+            <div>
+                <Navbar />
+                <div className="pt-24 text-center text-gray-500">Loading...</div>
+            </div>
+        );
+    }
+
+    if (!book) {
+        return (
+            <div>
+                <Navbar />
+                <div className="pt-24 text-center text-gray-500">Book not found</div>
+            </div>
+        );
+    }
+
+    // 根据是否有可借副本 / 是否在检查，决定按钮文案和颜色
+    let borrowText = "Borrow Book";
+    if (checkingCopy) {
+        borrowText = "Checking availability...";
+    } else if (!availableCopy) {
+        borrowText = "All copies borrowed";
+    }
+
+    const borrowBtnClass = canBorrow
+        ? "bg-indigo-600 hover:bg-indigo-700 cursor-pointer"
+        : "bg-gray-400 cursor-not-allowed";
 
     return (
         <div>
@@ -77,26 +187,30 @@ export default function BookDetail() {
                         <h1 className="text-3xl font-bold text-gray-900">{book.title}</h1>
 
                         <p className="mt-2 text-gray-700 text-lg">
-                            <span className="font-semibold">Author:</span> {book.author || "Unknown"}
+                            <span className="font-semibold">Author:</span>{" "}
+                            {book.author || "Unknown"}
                         </p>
 
                         <p className="mt-1 text-gray-700 text-lg">
-                            <span className="font-semibold">Publisher:</span> {book.publisher || "Unknown"}
+                            <span className="font-semibold">Publisher:</span>{" "}
+                            {book.publisher || "Unknown"}
                         </p>
 
                         <p className="mt-1 text-gray-700 text-lg">
-                            <span className="font-semibold">Published Year:</span> {book.publish_year || "Unknown"}
+                            <span className="font-semibold">Published Year:</span>{" "}
+                            {book.publish_year || "Unknown"}
                         </p>
 
-                        {/* ⭐ Borrow 按钮 */}
+                        {/* ⭐ 动态 Borrow 按钮 */}
                         <button
                             onClick={handleBorrow}
-                            className="mt-4 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition"
+                            disabled={!canBorrow}
+                            className={`mt-4 text-white px-4 py-2 rounded-lg transition ${borrowBtnClass}`}
                         >
-                            Borrow Book
+                            {borrowText}
                         </button>
 
-                        {/* ⭐ Locate 按钮 */}
+                        {/* ⭐ Locate 按钮（即使已借完也可以看位置） */}
                         <button
                             onClick={handleLocate}
                             className="mt-3 flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition"

@@ -88,17 +88,24 @@ def delete_book(book_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Book not found")
     return {"ok": True}
 
+
 @router.get("/{book_id}/first_available_copy")
 def get_first_available_copy(book_id: int, db: Session = Depends(get_db)):
+
     copy = (
         db.query(BookCopy)
         .filter(BookCopy.book_id == book_id, BookCopy.status == "available")
+        .order_by(BookCopy.copy_id)
         .first()
     )
+
     if not copy:
-        return {"copy_id": None}  # 前端显示“无可借副本”
+        return None
+
     return {
         "copy_id": copy.copy_id,
+        "shelf_id": copy.shelf_id,
         "status": copy.status,
-        "due_date": copy.due_date
+        "due_date": copy.due_date,
     }
+

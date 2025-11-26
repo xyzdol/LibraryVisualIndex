@@ -31,15 +31,15 @@ export interface RankedBook extends BookBase {
     borrow_count: number;
 }
 
-/* 补充 shelf_id ——关键！跳到地图时必须有 */
+/** ★ 一定要有 shelf_id！ */
 export interface FirstAvailableCopy {
     copy_id: number;
-    shelf_id: number;     // ★ 新增
+    shelf_id: number;
     status: string;
     due_date: string | null;
 }
 
-// 获取货架上的副本
+// 货架上的所有副本
 export async function getBooksByShelf(
     shelfId: number
 ): Promise<BookCopyWithBook[]> {
@@ -67,7 +67,7 @@ export async function getMonthlyRanking(
     return http.get<RankedBook[]>(`/books/ranking/month?limit=${limit}`);
 }
 
-// ★ 获取某本书第一本可借的副本（含 shelf_id）
+// 获取某本书第一本可借的副本
 export async function getFirstAvailableCopy(
     bookId: number
 ): Promise<FirstAvailableCopy | null> {
