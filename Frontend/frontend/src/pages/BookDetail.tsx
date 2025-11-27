@@ -2,9 +2,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
-import { getComments, createComment, type CommentOut } from "../api/comments";
-
-
+import {getComments, createComment, type CommentOut, deleteComment} from "../api/comments";
 
 import {
     getBookDetail,
@@ -12,60 +10,113 @@ import {
     type BookDetailInfo,
     type FirstAvailableCopy,
     type BookStats,
-    getBookStats
+    getBookStats,
 } from "../api/books";
 
 import { borrowBook } from "../api/borrowRecord";
 import { ArrowLeftIcon, MapIcon } from "@heroicons/react/24/outline";
 
 export default function BookDetail() {
-    const [comments, setComments] = useState<CommentOut[]>([]);
-    const [newComment, setNewComment] = useState("");
-    const [isAnonymous, setIsAnonymous] = useState(false);
+
+    const rawUser = localStorage.getItem("user");
+    const currentUserId = rawUser ? (JSON.parse(rawUser).user?.user_id ?? JSON.parse(rawUser).user_id) : null;
+
+
+    const [isWriting, setIsWriting] = useState(false);
+
 
     const { bookId } = useParams();
     const navigate = useNavigate();
 
-    const [stats, setStats] = useState<BookStats | null>(null);
-
-
+    // 书信息 & 状态
     const [book, setBook] = useState<BookDetailInfo | null>(null);
+    const [stats, setStats] = useState<BookStats | null>(null);
     const [loading, setLoading] = useState(true);
 
-    // ⭐ 当前这本书“第一本可借副本”的信息
-    const [availableCopy, setAvailableCopy] = useState<FirstAvailableCopy | null>(null);
+    // 当前这本书“第一本可借副本”的信息
+    const [availableCopy, setAvailableCopy] =
+        useState<FirstAvailableCopy | null>(null);
     const [checkingCopy, setCheckingCopy] = useState(true);
 
     // 借书按钮 loading
     const [borrowLoading, setBorrowLoading] = useState(false);
-
-    // 方便判断是否还能借
     const canBorrow = !!availableCopy && !borrowLoading;
 
+    // 评论
+    const [comments, setComments] = useState<CommentOut[]>([]);
+    const [newComment, setNewComment] = useState("");
+    const [isAnonymous, setIsAnonymous] = useState(false);
+
+    // ------- 评论相关函数 --------
+    async function handleDeleteComment(commentId: number) {
+        const ok = confirm("Are you sure you want to delete this comment?");
+        if (!ok) return;
+
+        try {
+            await deleteComment(commentId);
+            await loadComments(); // 重新加载评论
+        } catch (err) {
+            console.error(err);
+            alert("Failed to delete comment.");
+        }
+    }
+
+    async function loadComments() {
+        if (!bookId) return;
+        const data = await getComments(Number(bookId));
+        setComments(data);
+    }
+
+    async function handleSubmitComment() {
+        const raw = localStorage.getItem("user");
+        if (!raw) {
+            alert("Please login first.");
+            navigate("/login");
+            return;
+        }
+
+        const parsed = JSON.parse(raw);
+        const userId = parsed.user?.user_id ?? parsed.user_id;
+
+        if (!newComment.trim()) {
+            alert("Comment cannot be empty");
+            return;
+        }
+
+        await createComment({
+            book_id: Number(bookId),
+            user_id: userId,
+            content: newComment,
+            is_anonymous: isAnonymous,
+        });
+
+        setNewComment("");
+        setIsAnonymous(false);
+        loadComments(); // 自动刷新评论
+    }
+
+    // ------- 页面加载：书详情 + 统计 + 可借副本 + 评论 --------
     useEffect(() => {
         async function load() {
-            const data = await getBookDetail(Number(bookId));
-            setBook(data);
-
-            const s = await getBookStats(Number(bookId));
-            setStats(s);
-
-            setLoading(false);
-
             if (!bookId) return;
 
             setLoading(true);
             setCheckingCopy(true);
 
             try {
-                // 并行请求：书的详情 + 当前可借副本
-                const [detail, copy] = await Promise.all([
+                // 详情 + 副本 + 统计 并行拉取
+                const [detail, copy, s] = await Promise.all([
                     getBookDetail(Number(bookId)),
                     getFirstAvailableCopy(Number(bookId)),
+                    getBookStats(Number(bookId)),
                 ]);
 
                 setBook(detail);
                 setAvailableCopy(copy); // null 代表“已借完”
+                setStats(s);
+
+                // 评论单独拉
+                await loadComments();
             } catch (err) {
                 console.error("Failed to load book detail:", err);
             } finally {
@@ -73,10 +124,11 @@ export default function BookDetail() {
                 setCheckingCopy(false);
             }
         }
+
         load();
     }, [bookId]);
 
-    /** ⭐ 借书逻辑：用 availableCopy.copy_id，而不是 bookId */
+    // ------- 借书逻辑：用 availableCopy.copy_id，而不是 bookId --------
     async function handleBorrow() {
         if (!bookId) return;
 
@@ -133,41 +185,9 @@ export default function BookDetail() {
             setBorrowLoading(false);
         }
     }
-    async function loadComments() {
-        if (!bookId) return;
-        const data = await getComments(Number(bookId));
-        setComments(data);
-    }
-
-    async function handleSubmitComment() {
-        const raw = localStorage.getItem("user");
-        if (!raw) {
-            alert("Please login first.");
-            navigate("/login");
-            return;
-        }
-
-        const parsed = JSON.parse(raw);
-        const userId = parsed.user?.user_id ?? parsed.user_id;
-
-        if (!newComment.trim()) {
-            alert("Comment cannot be empty");
-            return;
-        }
-
-        await createComment({
-            book_id: Number(bookId),
-            user_id: userId,
-            content: newComment,
-            is_anonymous: isAnonymous,
-        });
-
-        setNewComment("");
-        setIsAnonymous(false);
-        loadComments(); // ⭐ 自动刷新评论
-    }
 
 
+    // ------- 定位逻辑：随时刷新一下 first_available_copy --------
     async function handleLocate() {
         if (!bookId) return;
         const latestCopy = await getFirstAvailableCopy(Number(bookId));
@@ -178,10 +198,8 @@ export default function BookDetail() {
         }
 
         setAvailableCopy(latestCopy);
-
         navigate(`/map?shelf=${latestCopy.shelf_id}`);
     }
-
 
     if (loading) {
         return (
@@ -196,12 +214,13 @@ export default function BookDetail() {
         return (
             <div>
                 <Navbar />
-                <div className="pt-24 text-center text-gray-500">Book not found</div>
+                <div className="pt-24 text-center text-gray-500">
+                    Book not found
+                </div>
             </div>
         );
     }
 
-    // 根据是否有可借副本 / 是否在检查，决定按钮文案和颜色
     let borrowText = "Borrow Book";
     if (checkingCopy) {
         borrowText = "Checking availability...";
@@ -217,7 +236,7 @@ export default function BookDetail() {
         <div>
             <Navbar />
 
-            <div className="max-w-4xl mx-auto pt-28 px-6">
+            <div className="max-w-4xl mx-auto pt-28 px-6 pb-10">
                 {/* 返回按钮 */}
                 <button
                     onClick={() => navigate(-1)}
@@ -228,14 +247,20 @@ export default function BookDetail() {
                     Back
                 </button>
 
-                <div className="bg-white shadow-lg p-6 rounded-2xl flex gap-8">
+                {/* 书籍详情卡片 */}
+                <div className="bg-white shadow-lg p-6 rounded-2xl flex flex-col lg:flex-row gap-8">
                     <img
-                        src={book.cover_image_url || "https://via.placeholder.com/400x550"}
-                        className="w-64 h-96 rounded-xl object-cover shadow-md"
+                        src={
+                            book.cover_image_url ||
+                            "https://via.placeholder.com/400x550"
+                        }
+                        className="w-64 h-96 rounded-xl object-cover shadow-md mx-auto lg:mx-0"
                     />
 
-                    <div className="flex flex-col">
-                        <h1 className="text-3xl font-bold text-gray-900">{book.title}</h1>
+                    <div className="flex flex-col flex-1">
+                        <h1 className="text-3xl font-bold text-gray-900">
+                            {book.title}
+                        </h1>
 
                         <p className="mt-2 text-gray-700 text-lg">
                             <span className="font-semibold">Author:</span>{" "}
@@ -252,7 +277,7 @@ export default function BookDetail() {
                             {book.publish_year || "Unknown"}
                         </p>
 
-                        {/* ⭐ 动态 Borrow 按钮 */}
+                        {/* 动态 Borrow 按钮 */}
                         <button
                             onClick={handleBorrow}
                             disabled={!canBorrow}
@@ -261,7 +286,7 @@ export default function BookDetail() {
                             {borrowText}
                         </button>
 
-                        {/* ⭐ Locate 按钮（即使已借完也可以看位置） */}
+                        {/* Locate 按钮 */}
                         <button
                             onClick={handleLocate}
                             className="mt-3 flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition"
@@ -273,14 +298,17 @@ export default function BookDetail() {
                         {stats && (
                             <div className="mt-4 p-3 bg-gray-100 rounded-xl text-sm text-gray-700">
                                 <p>
-                                    <strong>Available:</strong> {stats.available} / {stats.total}
+                                    <strong>Available:</strong> {stats.available} /{" "}
+                                    {stats.total}
                                 </p>
 
-                                {stats.available === 0 && stats.next_return_date && (
-                                    <p className="mt-1 text-red-600">
-                                        <strong>Next return:</strong> {stats.next_return_date}
-                                    </p>
-                                )}
+                                {stats.available === 0 &&
+                                    stats.next_return_date && (
+                                        <p className="mt-1 text-red-600">
+                                            <strong>Next return:</strong>{" "}
+                                            {stats.next_return_date}
+                                        </p>
+                                    )}
                             </div>
                         )}
 
@@ -288,17 +316,82 @@ export default function BookDetail() {
                         <p className="text-gray-600 leading-relaxed">
                             {book.summary || "No summary available."}
                         </p>
-                        {/* ====================== 评论区 ====================== */}
-                        <h2 className="text-2xl font-semibold mt-10 mb-4">Comments</h2>
+                    </div>
+                </div>
 
-                        <div className="bg-gray-100 p-4 rounded-xl mb-6">
-    <textarea
-        value={newComment}
-        onChange={(e) => setNewComment(e.target.value)}
-        placeholder="Write a comment..."
-        className="w-full p-3 rounded-lg border border-gray-300 mb-3"
-        rows={3}
-    />
+                {/* ====================== 评论区：整块放在下面，两列布局 ====================== */}
+                {/* ====================== 评论区 ====================== */}
+                <div className="mt-14">
+                    <h2 className="text-2xl font-semibold mb-6">Comments</h2>
+
+                    {/* 评论列表 */}
+                    <div className="mb-6 space-y-4">
+                        {comments.length === 0 ? (
+                            <p className="text-gray-500 text-center">No comments yet.</p>
+                        ) : (
+                            comments.map((c) => (
+                                <div
+                                    key={c.comment_id}
+                                    className="bg-white p-5 rounded-xl shadow-sm flex gap-4 items-start relative"
+                                >
+                                    {/* 头像 */}
+                                    <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center text-gray-500 font-bold">
+                                        {c.is_anonymous ? "?" : (c.user_id ?? "U")}
+                                    </div>
+
+                                    {/* 内容区域：全宽 */}
+                                    <div className="flex-1">
+                                        <div className="flex justify-between items-center">
+            <span className="font-semibold">
+                {c.is_anonymous ? "Anonymous" : `User ${c.user_id}`}
+            </span>
+
+                                            <span className="text-xs text-gray-400 mr-8">
+                {new Date(c.created_at).toLocaleString()}
+            </span>
+                                        </div>
+
+                                        <p className="mt-1 text-gray-700">{c.content}</p>
+                                    </div>
+
+                                    {/* 删除按钮 —— 右侧，不挡时间 */}
+                                    {!c.is_anonymous && c.user_id === currentUserId && (
+                                        <button
+                                            onClick={() => handleDeleteComment(c.comment_id)}
+                                            className="text-red-500 hover:text-red-700 text-lg p-2"
+                                            title="Delete comment"
+                                        >
+                                            🗑
+                                        </button>
+                                    )}
+                                </div>
+
+                            ))
+                        )}
+                    </div>
+
+                    {/* + 添加评论按钮 */}
+                    {!isWriting && (
+                        <div className="text-center">
+                            <button
+                                onClick={() => setIsWriting(true)}
+                                className="px-6 py-2 bg-indigo-600 text-white rounded-full shadow hover:bg-indigo-700 transition"
+                            >
+                                + Add Comment
+                            </button>
+                        </div>
+                    )}
+
+                    {/* 输入框区域 */}
+                    {isWriting && (
+                        <div className="bg-gray-100 p-4 rounded-xl mt-6 transition-all">
+            <textarea
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                placeholder="Write a comment..."
+                className="w-full p-3 rounded-lg border border-gray-300 mb-3"
+                rows={3}
+            />
 
                             <label className="flex items-center mb-3">
                                 <input
@@ -310,41 +403,29 @@ export default function BookDetail() {
                                 Post anonymously
                             </label>
 
-                            <button
-                                onClick={handleSubmitComment}
-                                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
-                            >
-                                Submit Comment
-                            </button>
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={handleSubmitComment}
+                                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+                                >
+                                    Submit Comment
+                                </button>
+
+                                <button
+                                    onClick={() => {
+                                        setIsWriting(false);
+                                        setNewComment("");
+                                        setIsAnonymous(false);
+                                    }}
+                                    className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition"
+                                >
+                                    Cancel
+                                </button>
+                            </div>
                         </div>
-
-                        {/* 评论列表 */}
-                        <div className="space-y-4">
-                            {comments.length === 0 ? (
-                                <p className="text-gray-500">No comments yet.</p>
-                            ) : (
-                                comments.map((c) => (
-                                    <div
-                                        key={c.comment_id}
-                                        className="bg-white p-4 shadow rounded-xl"
-                                    >
-                                        <div className="flex justify-between items-center mb-2">
-                    <span className="font-semibold">
-                        {c.is_anonymous ? "Anonymous" : `User ${c.user_id}`}
-                    </span>
-                                            <span className="text-xs text-gray-400">
-                        {new Date(c.created_at).toLocaleString()}
-                    </span>
-                                        </div>
-                                        <p>{c.content}</p>
-                                    </div>
-                                ))
-                            )}
-                        </div>
-
-
-                    </div>
+                    )}
                 </div>
+
             </div>
         </div>
     );

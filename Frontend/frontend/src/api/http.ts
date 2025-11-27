@@ -3,6 +3,7 @@ export interface HttpClient {
     get<T>(path: string): Promise<T>;
     post<T, B = unknown>(path: string, body?: B): Promise<T>;
     put<T, B = unknown>(path: string, body?: B): Promise<T>;
+    delete<T>(path: string): Promise<T>;
 }
 
 const BASE_URL = "http://127.0.0.1:8000";
@@ -27,12 +28,12 @@ async function request<T, B = unknown>(
 }
 
 const http: HttpClient = {
-    get: <T>(path: string) => request<T>("GET", path),
+    get:  <T>(path: string)               => request<T>("GET", path),
     post: <T, B = unknown>(path: string, body?: B) =>
         request<T, B>("POST", path, body),
-    put: <T, B = unknown>(path: string, body?: B) =>
+    put:  <T, B = unknown>(path: string, body?: B) =>
         request<T, B>("PUT", path, body),
-    delete: <T>(path: string) => request<T>("DELETE", path),
+    delete: <T>(path: string)             => request<T>("DELETE", path),
 };
 
 export default http;
