@@ -109,3 +109,37 @@ def get_first_available_copy(book_id: int, db: Session = Depends(get_db)):
         "due_date": copy.due_date,
     }
 
+@router.get("/{book_id}/stats")
+def get_book_stats(book_id: int, db: Session = Depends(get_db)):
+    """
+    返回：总数、可借数量、已借数量、最早归还日期
+    """
+    # 1. 查询所有副本
+    copies = (
+        db.query(BookCopy)
+        .filter(BookCopy.book_id == book_id)
+        .all()
+    )
+
+    if not copies:
+        return {
+            "total": 0,
+            "available": 0,
+            "borrowed": 0,
+            "next_return_date": None,
+        }
+
+    total = len(copies)
+    available = sum(1 for c in copies if c.status == "available")
+    borrowed = total - available
+
+    # 2. 计算最早归还日期（due_date 最小）
+    due_dates = [c.due_date for c in copies if c.due_date]
+    next_return_date = min(due_dates) if due_dates else None
+
+    return {
+        "total": total,
+        "available": available,
+        "borrowed": borrowed,
+        "next_return_date": next_return_date,
+    }

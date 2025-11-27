@@ -32,6 +32,7 @@ const http: HttpClient = {
         request<T, B>("POST", path, body),
     put: <T, B = unknown>(path: string, body?: B) =>
         request<T, B>("PUT", path, body),
+    delete: <T>(path: string) => request<T>("DELETE", path),
 };
 
 export default http;

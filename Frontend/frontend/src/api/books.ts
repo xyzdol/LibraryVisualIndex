@@ -75,3 +75,13 @@ export async function getFirstAvailableCopy(
         `/books/${bookId}/first_available_copy`
     );
 }
+export interface BookStats {
+    total: number;
+    available: number;
+    borrowed: number;
+    next_return_date: string | null;
+}
+
+export async function getBookStats(bookId: number): Promise<BookStats> {
+    return http.get<BookStats>(`/books/${bookId}/stats`);
+}

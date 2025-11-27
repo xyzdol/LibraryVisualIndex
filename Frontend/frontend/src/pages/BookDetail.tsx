@@ -2,20 +2,32 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
+import { getComments, createComment, type CommentOut } from "../api/comments";
+
+
 
 import {
     getBookDetail,
     getFirstAvailableCopy,
     type BookDetailInfo,
     type FirstAvailableCopy,
+    type BookStats,
+    getBookStats
 } from "../api/books";
 
 import { borrowBook } from "../api/borrowRecord";
 import { ArrowLeftIcon, MapIcon } from "@heroicons/react/24/outline";
 
 export default function BookDetail() {
+    const [comments, setComments] = useState<CommentOut[]>([]);
+    const [newComment, setNewComment] = useState("");
+    const [isAnonymous, setIsAnonymous] = useState(false);
+
     const { bookId } = useParams();
     const navigate = useNavigate();
+
+    const [stats, setStats] = useState<BookStats | null>(null);
+
 
     const [book, setBook] = useState<BookDetailInfo | null>(null);
     const [loading, setLoading] = useState(true);
@@ -32,6 +44,14 @@ export default function BookDetail() {
 
     useEffect(() => {
         async function load() {
+            const data = await getBookDetail(Number(bookId));
+            setBook(data);
+
+            const s = await getBookStats(Number(bookId));
+            setStats(s);
+
+            setLoading(false);
+
             if (!bookId) return;
 
             setLoading(true);
@@ -113,24 +133,55 @@ export default function BookDetail() {
             setBorrowLoading(false);
         }
     }
-
-    /** ⭐ 寻找位置：同样用 availableCopy 的 shelf_id */
-    async function handleLocate() {
+    async function loadComments() {
         if (!bookId) return;
+        const data = await getComments(Number(bookId));
+        setComments(data);
+    }
 
-        // 如果已经有 availableCopy，就不再请求一次
-        let copy = availableCopy;
-        if (!copy) {
-            copy = await getFirstAvailableCopy(Number(bookId));
+    async function handleSubmitComment() {
+        const raw = localStorage.getItem("user");
+        if (!raw) {
+            alert("Please login first.");
+            navigate("/login");
+            return;
         }
 
-        if (!copy) {
+        const parsed = JSON.parse(raw);
+        const userId = parsed.user?.user_id ?? parsed.user_id;
+
+        if (!newComment.trim()) {
+            alert("Comment cannot be empty");
+            return;
+        }
+
+        await createComment({
+            book_id: Number(bookId),
+            user_id: userId,
+            content: newComment,
+            is_anonymous: isAnonymous,
+        });
+
+        setNewComment("");
+        setIsAnonymous(false);
+        loadComments(); // ⭐ 自动刷新评论
+    }
+
+
+    async function handleLocate() {
+        if (!bookId) return;
+        const latestCopy = await getFirstAvailableCopy(Number(bookId));
+
+        if (!latestCopy) {
             alert("No available copy. All copies are borrowed!");
             return;
         }
 
-        navigate(`/map?shelf=${copy.shelf_id}`);
+        setAvailableCopy(latestCopy);
+
+        navigate(`/map?shelf=${latestCopy.shelf_id}`);
     }
+
 
     if (loading) {
         return (
@@ -219,10 +270,79 @@ export default function BookDetail() {
                             Locate on Map
                         </button>
 
+                        {stats && (
+                            <div className="mt-4 p-3 bg-gray-100 rounded-xl text-sm text-gray-700">
+                                <p>
+                                    <strong>Available:</strong> {stats.available} / {stats.total}
+                                </p>
+
+                                {stats.available === 0 && stats.next_return_date && (
+                                    <p className="mt-1 text-red-600">
+                                        <strong>Next return:</strong> {stats.next_return_date}
+                                    </p>
+                                )}
+                            </div>
+                        )}
+
                         <h2 className="text-xl font-semibold mt-6">Summary</h2>
                         <p className="text-gray-600 leading-relaxed">
                             {book.summary || "No summary available."}
                         </p>
+                        {/* ====================== 评论区 ====================== */}
+                        <h2 className="text-2xl font-semibold mt-10 mb-4">Comments</h2>
+
+                        <div className="bg-gray-100 p-4 rounded-xl mb-6">
+    <textarea
+        value={newComment}
+        onChange={(e) => setNewComment(e.target.value)}
+        placeholder="Write a comment..."
+        className="w-full p-3 rounded-lg border border-gray-300 mb-3"
+        rows={3}
+    />
+
+                            <label className="flex items-center mb-3">
+                                <input
+                                    type="checkbox"
+                                    checked={isAnonymous}
+                                    onChange={(e) => setIsAnonymous(e.target.checked)}
+                                    className="mr-2"
+                                />
+                                Post anonymously
+                            </label>
+
+                            <button
+                                onClick={handleSubmitComment}
+                                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+                            >
+                                Submit Comment
+                            </button>
+                        </div>
+
+                        {/* 评论列表 */}
+                        <div className="space-y-4">
+                            {comments.length === 0 ? (
+                                <p className="text-gray-500">No comments yet.</p>
+                            ) : (
+                                comments.map((c) => (
+                                    <div
+                                        key={c.comment_id}
+                                        className="bg-white p-4 shadow rounded-xl"
+                                    >
+                                        <div className="flex justify-between items-center mb-2">
+                    <span className="font-semibold">
+                        {c.is_anonymous ? "Anonymous" : `User ${c.user_id}`}
+                    </span>
+                                            <span className="text-xs text-gray-400">
+                        {new Date(c.created_at).toLocaleString()}
+                    </span>
+                                        </div>
+                                        <p>{c.content}</p>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+
+
                     </div>
                 </div>
             </div>
