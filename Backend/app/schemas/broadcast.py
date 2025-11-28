@@ -1,5 +1,7 @@
 from pydantic import BaseModel
 from datetime import datetime
+from typing import Optional
+
 
 class BroadcastBase(BaseModel):
     user_id: int
@@ -8,8 +10,10 @@ class BroadcastBase(BaseModel):
     content: str
     is_anonymous: bool = False
 
+
 class BroadcastCreate(BroadcastBase):
     pass
+
 
 class BroadcastOut(BaseModel):
     broadcast_id: int
@@ -19,7 +23,6 @@ class BroadcastOut(BaseModel):
     content: str
     is_anonymous: bool
     created_at: Optional[datetime] = None
-
 
     class Config:
         from_attributes = True

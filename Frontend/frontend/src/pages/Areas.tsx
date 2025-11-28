@@ -1,13 +1,17 @@
+// src/pages/Areas.tsx
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { getAreas } from "../api/areas.ts";
+import { getAreas } from "../api/areas";
 import Navbar from "../components/Navbar";
+
+const BASE_URL = "http://127.0.0.1:8000";
 
 interface Area {
     area_id: number;
     name: string;
     floor: number;
     description: string;
+    visit_count?: number;
 }
 
 export default function Areas() {
@@ -16,16 +20,45 @@ export default function Areas() {
     const navigate = useNavigate();
 
     useEffect(() => {
-        async function fetchAreas() {
-            const res = await getAreas();
-            setAreas(res);
+        async function load() {
+            const list = await getAreas();
+            setAreas(list as Area[]);
             setLoading(false);
         }
-        fetchAreas();
+        load();
     }, []);
 
+    async function handleEnter(areaId: number, name: string) {
+        // 区域访问计数
+        try {
+            await fetch(`${BASE_URL}/areas/${areaId}/visit`, { method: "POST" });
+        } catch (e) {
+            console.warn("visit API failed", e);
+        }
+
+        navigate(`/shelves/${areaId}?name=${name}`);
+    }
+
     if (loading) {
-        return <div className="text-center p-10 text-gray-500 text-xl">Loading...</div>;
+        return (
+            <div>
+                <Navbar />
+                <div className="pt-24 text-center text-gray-500 text-xl">
+                    Loading...
+                </div>
+            </div>
+        );
+    }
+
+    const maxVisit = Math.max(...areas.map((a) => a.visit_count || 0), 1);
+
+    function getHeatOverlay(visits: number | undefined) {
+        const v = visits || 0;
+        const ratio = v / maxVisit;
+
+        if (ratio < 0.33) return "bg-white/0";
+        if (ratio < 0.66) return "bg-yellow-200/25";
+        return "bg-red-300/25";
     }
 
     const gradients = [
@@ -34,7 +67,7 @@ export default function Areas() {
         "from-teal-400 to-green-400",
         "from-orange-400 to-yellow-300",
         "from-rose-400 to-red-500",
-        "from-indigo-400 to-purple-500"
+        "from-indigo-400 to-purple-500",
     ];
 
     return (
@@ -42,22 +75,39 @@ export default function Areas() {
             <Navbar />
             <div className="pt-24 p-8">
 
-                <h1 className="text-4xl font-bold text-gray-900 mb-6">Library Areas</h1>
+                <div className="flex justify-between items-center mb-6">
+                    <h1 className="text-4xl font-bold">Library Areas</h1>
+
+                    <button
+                        onClick={() => navigate("/areas/heatmap")}
+                        className="px-4 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 transition"
+                    >
+                        Heatmap View
+                    </button>
+                </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                     {areas.map((area, idx) => (
                         <div
                             key={area.area_id}
-                            onClick={() =>
-                                navigate(`/shelves/${area.area_id}?name=${area.name}`)
-                            }
-                            className={`cursor-pointer p-6 text-white rounded-2xl bg-gradient-to-r ${
+                            onClick={() => handleEnter(area.area_id, area.name)}
+                            className={`cursor-pointer relative p-6 text-white rounded-2xl bg-gradient-to-r ${
                                 gradients[idx % gradients.length]
                             } shadow-md hover:shadow-xl hover:-translate-y-1 transition`}
                         >
-                            <h2 className="text-2xl font-semibold">{area.name}</h2>
-                            <p className="text-sm mt-2">Floor: {area.floor}</p>
-                            <p className="text-sm opacity-80">{area.description}</p>
+                            <div
+                                className={`absolute inset-0 rounded-2xl pointer-events-none ${getHeatOverlay(
+                                    area.visit_count
+                                )}`}
+                            />
+
+                            <h2 className="text-2xl font-semibold relative">{area.name}</h2>
+                            <p className="text-sm mt-2 relative">Floor: {area.floor}</p>
+                            <p className="text-sm opacity-80 relative">{area.description}</p>
+
+                            <p className="mt-2 text-xs text-white/90 font-semibold relative">
+                                Visits: {area.visit_count ?? 0}
+                            </p>
                         </div>
                     ))}
                 </div>

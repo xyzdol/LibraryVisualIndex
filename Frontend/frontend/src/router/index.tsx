@@ -13,6 +13,8 @@ import Books from "../pages/Books";
 import BookDetail from "../pages/BookDetail";
 import BorrowedBooks from "../pages/BorrowedBooks";
 import LibraryMap from "../pages/LibraryMap";
+import HeatmapAreas from "../pages/HeatmapAreas";
+
 
 const router = createBrowserRouter([
     {
@@ -63,6 +65,10 @@ const router = createBrowserRouter([
         path: "/map",
         element: <LibraryMap />,
     },
+    {
+        path:"/areas/heatmap",
+        element:<HeatmapAreas />,
+    }
 ]);
 
 export default router;

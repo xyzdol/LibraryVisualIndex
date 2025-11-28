@@ -32,3 +32,14 @@ def delete_area(db: Session, area_id: int):
     db.delete(area)
     db.commit()
     return True
+
+def add_visit(db: Session, area_id: int):
+    area = db.query(Area).filter(Area.area_id == area_id).first()
+    if not area:
+        raise HTTPException(status_code=404, detail="Area not found")
+
+    area.visit_count += 1
+    db.commit()
+    db.refresh(area)
+    return area
+

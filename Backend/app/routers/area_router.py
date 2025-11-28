@@ -41,3 +41,8 @@ def delete_area(area_id: int, db: Session = Depends(get_db)):
     if not ok:
         raise HTTPException(status_code=404, detail="Area not found")
     return {"message": "Area deleted"}
+
+@router.post("/{area_id}/visit")
+def visit_area(area_id: int, db: Session = Depends(get_db)):
+    return crud_area.add_visit(db, area_id)
+
