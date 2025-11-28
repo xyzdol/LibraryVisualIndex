@@ -29,12 +29,9 @@ export default function Areas() {
     }, []);
 
     async function handleEnter(areaId: number, name: string) {
-        // 区域访问计数
         try {
             await fetch(`${BASE_URL}/areas/${areaId}/visit`, { method: "POST" });
-        } catch (e) {
-            console.warn("visit API failed", e);
-        }
+        } catch {}
 
         navigate(`/shelves/${areaId}?name=${name}`);
     }
@@ -55,7 +52,6 @@ export default function Areas() {
     function getHeatOverlay(visits: number | undefined) {
         const v = visits || 0;
         const ratio = v / maxVisit;
-
         if (ratio < 0.33) return "bg-white/0";
         if (ratio < 0.66) return "bg-yellow-200/25";
         return "bg-red-300/25";
@@ -71,10 +67,15 @@ export default function Areas() {
     ];
 
     return (
-        <div>
+        <div
+            className="min-h-screen bg-cover bg-center"
+            style={{
+                backgroundImage: "url('/background/bkg3.jpg')",
+            }}
+        >
             <Navbar />
-            <div className="pt-24 p-8">
 
+            <div className="pt-24 p-8 backdrop-blur-md bg-white/30 mx-6 rounded-3xl">
                 <div className="flex justify-between items-center mb-6">
                     <h1 className="text-4xl font-bold">Library Areas</h1>
 
