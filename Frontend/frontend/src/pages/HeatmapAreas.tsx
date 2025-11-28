@@ -8,7 +8,7 @@ interface Area {
     name: string;
     floor: number;
     description: string;
-    visit_count?: number;
+    visit_count: number;
 }
 
 export default function HeatmapAreas() {
@@ -29,16 +29,13 @@ export default function HeatmapAreas() {
         return <div className="pt-24 text-center text-gray-500 text-xl">Loading...</div>;
     }
 
-    const maxVisit = Math.max(...areas.map((a) => a.visit_count || 0), 1);
+    const maxVisit = Math.max(...areas.map(a => a.visit_count), 1);
 
-    // ⭐ 完整热力色板
-    function getHeatColor(vc: number | undefined) {
-        const v = vc ?? 0;
-        const ratio = v / maxVisit;
-        if (ratio < 0.25) return "bg-green-400";
-        if (ratio < 0.5) return "bg-yellow-400";
-        if (ratio < 0.75) return "bg-orange-500";
-        return "bg-red-600";
+    // ⭐ 平滑渐变色：访问越多越红，越少越绿
+    function getHeatColor(visits: number) {
+        const ratio = visits / maxVisit;  // 0~1
+        const hue = 120 - ratio * 120;     // 120=绿 → 0=红
+        return `hsl(${hue}, 85%, 55%)`;    // 饱和度亮度适中
     }
 
     return (
@@ -62,15 +59,15 @@ export default function HeatmapAreas() {
                     {areas.map((area) => (
                         <div
                             key={area.area_id}
-                            className={`cursor-pointer p-6 text-white rounded-2xl shadow-md hover:shadow-xl hover:-translate-y-1 transition ${getHeatColor(
-                                area.visit_count
-                            )}`}
+                            onClick={() => navigate(`/shelves/${area.area_id}?name=${area.name}`)}
+                            className="cursor-pointer p-6 text-white rounded-2xl shadow-md hover:shadow-xl hover:-translate-y-1 transition"
+                            style={{ backgroundColor: getHeatColor(area.visit_count) }}
                         >
                             <h2 className="text-2xl font-semibold">{area.name}</h2>
                             <p className="text-sm mt-2">Floor: {area.floor}</p>
                             <p className="text-sm opacity-80">{area.description}</p>
                             <p className="mt-2 text-xs text-white/90">
-                                Visits: {area.visit_count ?? 0}
+                                Visits: {area.visit_count}
                             </p>
                         </div>
                     ))}

@@ -2,7 +2,6 @@ from sqlalchemy import Column, Integer, String, Text
 from sqlalchemy.orm import relationship
 from app.database import Base
 
-
 class Area(Base):
     __tablename__ = "area"
 
@@ -11,6 +10,7 @@ class Area(Base):
     floor = Column(Integer, nullable=False)
     description = Column(Text)
 
-    # relationships
+    visit_count = Column(Integer, default=0)
+
     shelves = relationship("Shelf", back_populates="area")
     broadcasts = relationship("Broadcast", back_populates="area")

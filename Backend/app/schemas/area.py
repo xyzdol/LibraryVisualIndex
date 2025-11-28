@@ -15,6 +15,8 @@ class AreaUpdate(BaseModel):
 
 class AreaOut(AreaBase):
     area_id: int
+    visit_count: int = 0  
 
     class Config:
         from_attributes = True
+
